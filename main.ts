@@ -122,6 +122,9 @@ await runBars({
           phase = 1;
         } else {
           entryPx = (entryPx * Number(myQty) + px * Number(q)) / Number(myQty + q);
+          // The scale-in counts only once its fill is seen: if this leg is
+          // rejected the bot may still retry it on the next bar.
+          phase = 2;
         }
         myQty += q;
       } else {
@@ -160,7 +163,8 @@ await runBars({
         if (gain >= CAP_TP || gain <= -CAP_SL || held >= CAP_TIME) {
           orders = [sellAllOrder()].filter((o): o is OrderInput => o !== null);
         } else if (phase === 1 && gain <= CAP_ADD_DROP) {
-          phase = 2;
+          // Spend the rest of the cash. phase flips to 2 only when the fill
+          // is reported (see the fills loop above), so a rejected leg retries.
           const add = buyOrder(state, 10000);
           if (add !== null) orders = [add];
         }
